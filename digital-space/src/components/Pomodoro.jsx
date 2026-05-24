@@ -44,6 +44,13 @@ const Pomodoro = ({ t }) => {
   const r = 56, circ = 2 * Math.PI * r;
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss2 = String(secs % 60).padStart(2, "0");
+  const click=new Audio();
+  click.src='././sound/pomostart.wav'
+  click.volume=0.4;
+  const resetS=new Audio();
+  resetS.src='././sound/reset.wav'
+  
+
 
   return (
     <div className="card" style={{ padding: 22, height: "100%" }}>
@@ -56,7 +63,11 @@ const Pomodoro = ({ t }) => {
         {["focus", "break"].map((m) => (
           <button
             key={m}
-            onClick={() => sw(m)}
+            onClick={() => {
+                sw(m)
+                tabsound.play();
+              }}
+            
             style={{
               flex: 1, padding: 8, borderRadius: 50, border: "none", cursor: "pointer",
               background: mode === m ? t.green : t.bgLight,
@@ -93,7 +104,7 @@ const Pomodoro = ({ t }) => {
             <div className="hand" style={{ fontSize: 30, color: t.text, lineHeight: 1 }}>
               {mm}:{ss2}
             </div>
-            <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 700, marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 700, marginTop: 2}}>
               {mode === "focus" ? "FOCUS" : "BREAK"}
             </div>
           </div>
@@ -102,10 +113,15 @@ const Pomodoro = ({ t }) => {
 
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 14 }}>
         <button className="btn-g" style={{ padding: "10px 18px", fontSize: 13 }}
-          onClick={() => setRun((r) => !r)}>
+          onClick={() => {setRun((r) => !r);
+            click.play();
+          }}>
           {run ? "⏸ Pause" : "▶ Start"}
         </button>
-        <button className="btn-o" style={{ padding: "10px 14px", fontSize: 13 }} onClick={reset}>
+        <button className="btn-o" style={{ padding: "10px 14px", fontSize: 13 }} onClick={() => {
+          reset();
+          resetS.play();
+        }}>
           ↺ Reset
         </button>
       </div>

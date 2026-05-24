@@ -7,7 +7,11 @@ const NAV = [
   { id: "library", l: "📚 Library" },
   { id: "about", l: "🌿 About" },
 ];
-
+const playNavSound = () => {
+  const navS = new Audio('./sound/navsound.wav');
+  navS.volume = 0.2;
+  navS.play();
+};
 const Navbar = ({ page, setPage, nick, t }) => (
   <nav
     style={{
@@ -36,7 +40,10 @@ const Navbar = ({ page, setPage, nick, t }) => (
         <button
           key={n.id}
           className={`nav-i ${page === n.id ? "act" : ""}`}
-          onClick={() => setPage(n.id)}
+          onClick={() => {
+          setPage(n.id);
+          playNavSound();
+        }}
         >
           {n.l}
         </button>
