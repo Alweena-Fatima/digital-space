@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 
 const MODES = { focus: 25 * 60, break: 5 * 60 };
 
-const Pomodoro = ({ t }) => {
+const Pomodoro = ({ t, run, setRun }) => {
   const [mode, setMode] = useState("focus");
   const [secs, setSecs] = useState(25 * 60);
-  const [run, setRun] = useState(false);
+  //const [run, setRun] = useState(false);
   const [sessions, setSessions] = useState(0);
   const ref = useRef(null);
 
