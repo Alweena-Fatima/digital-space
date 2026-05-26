@@ -45,21 +45,30 @@ export default function App() {
         >
           <Navbar page={page} setPage={setPage} nick={nick} t={t} />
 
-          {page === "home" && (
-            <Home nick={nick} words={words} setWords={setWords} quotes={quotes} setQuotes={setQuotes} t={t} run={run} setRun={setRun} />
-          )}
-          {page === "themes" && (
+          <div style={{ display: page === "home" ? "block" : "none" }}>
+            <Home
+              nick={nick}
+              words={words}
+              setWords={setWords}
+              quotes={quotes}
+              setQuotes={setQuotes}
+              t={t}
+              run={run}
+              setRun={setRun}
+            />
+          </div>
+          <div style={{ display: page === "themes" ? "block" : "none" }}>
             <Themes sel={themeKey} setSel={setThemeKey} t={t} />
-          )}
-          {page === "study" && (
+          </div>
+          <div style={{ display: page === "study" ? "block" : "none" }}>
             <Study nick={nick} roomCode={roomCode} t={t} />
-          )}
-          {page === "library" && (
+          </div>
+          <div style={{ display: page === "library" ? "block" : "none" }}>
             <Library words={words} setWords={setWords} quotes={quotes} setQuotes={setQuotes} t={t} />
-          )}
-          {page === "about" && (
+          </div>
+          <div style={{ display: page === "about" ? "block" : "none" }}>
             <About t={t} />
-          )}
+          </div>
         </div>
       )}
     </>
