@@ -217,11 +217,58 @@ const GlobalStyles = ({ t }) => (
       background: ${t.green};
       cursor: pointer;
     }
+      .bg-effects {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+      /* 🌧️ Rain */
+@keyframes rainFall {
+  from {
+    transform: translateY(-120px);
+  }
+  to {
+    transform: translateY(110vh);
+  }
+}
+
+/* 🍂 Leaves */
+@keyframes leafFall {
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+  }
+  50% {
+    transform: translateX(40px) rotate(180deg);
+  }
+  100% {
+    transform: translateY(110vh) translateX(-40px) rotate(360deg);
+  }
+}
+
+/* ☕ Coffee steam float */
+@keyframes floatUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateY(-120px);
+    opacity: 0;
+  }
+}
 
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: ${t.bgDark}; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: ${t.textMuted}; border-radius: 10px; }
-  `}</style>
+  `
+
+
+}</style>
 );
 
 export default GlobalStyles;

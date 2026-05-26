@@ -29,6 +29,7 @@ export const THEMES = {
     badge: "rgba(125,185,222,0.15)",
     todoHover: "rgba(125,185,222,0.08)",
     selectBg: "rgba(125,185,222,0.12)",
+    bgEffect: "rain",
   },
   autumn: {
     label: "Autumn Room",
@@ -58,6 +59,7 @@ export const THEMES = {
     badge: "rgba(255,180,60,0.15)",
     todoHover: "rgba(255,180,60,0.08)",
     selectBg: "rgba(255,180,60,0.12)",
+    bgEffect: "leaves",
   },
   novel: {
     label: "Novel Room",
@@ -87,6 +89,7 @@ export const THEMES = {
     badge: "rgba(245,222,179,0.12)",
     todoHover: "rgba(245,222,179,0.06)",
     selectBg: "rgba(245,222,179,0.10)",
+    bgEffect: "books",
   },
   cafe: {
     label: "Cozy Café",
@@ -116,6 +119,7 @@ export const THEMES = {
     badge: "rgba(255,208,138,0.15)",
     todoHover: "rgba(255,208,138,0.08)",
     selectBg: "rgba(255,208,138,0.12)",
+    bgEffect: "coffee",
   },
   default: {
     label: "Cozy Default",
@@ -145,6 +149,7 @@ export const THEMES = {
     badge: "rgba(74,124,89,0.12)",
     todoHover: "rgba(74,124,89,0.06)",
     selectBg: "rgba(74,124,89,0.10)",
+    bgEffect: "plants", 
   },
 };
 

@@ -8,7 +8,7 @@ import Themes from "./components/Themes";
 import Study from "./components/Study";
 import Library from "./components/Library";
 import About from "./components/About";
-
+import BackgroundEffects from "./BackgroundEffects";
 export default function App() {
   const [screen, setScreen] = useState("landing");
   const [page, setPage] = useState("home");
@@ -41,8 +41,11 @@ export default function App() {
             minHeight: "100vh",
             background: t.pageBg,
             transition: "background 0.6s ease",
+            position: "relative",
+            zIndex: 1
           }}
         >
+          <BackgroundEffects effect={t.bgEffect} />
           <Navbar page={page} setPage={setPage} nick={nick} t={t} />
 
           <div style={{ display: page === "home" ? "block" : "none" }}>
