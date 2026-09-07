@@ -113,31 +113,101 @@ const ThemeCard = ({ id, sel, onSel, t }) => {
   );
 };
 
-const Themes = ({ sel, setSel, t }) => (
-  <div className="page" style={{ padding: "88px 24px 28px", maxWidth: 760, margin: "0 auto" }}>
-    <div style={{ textAlign: "center", marginBottom: 24 }}>
-      <div className="hand" style={{ fontSize: 32, color: t.green }}>Choose Your Room 🌸</div>
-      <p style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
-        Pick an atmosphere that changes the whole vibe
-      </p>
-    </div>
+const Themes = ({ roomCode, sel, setSel, t }) => {
 
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-      {["default", "rain", "autumn", "novel", "cafe"].map((id) => (
-        <ThemeCard key={id} id={id} sel={sel === id} onSel={setSel} t={t} />
-      ))}
-    </div>
+  const handleThemeSelect = async (id) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/${roomCode}/theme?theme=${id.toUpperCase()}`,
+      {
+        method: "PUT",
+      }
+    );
 
-    {sel && (
-      <p style={{
-        textAlign: "center", marginTop: 16,
-        fontSize: 12, color: t.green, fontWeight: 700,
-        animation: "fadeUp .4s ease",
-      }}>
-        ✨ Room atmosphere set to {THEMES[sel]?.label}!
-      </p>
-    )}
-  </div>
-);
+    if (!response.ok) {
+      throw new Error("Failed to update theme");
+    }
+
+    const data = await response.json();
+
+    console.log("Updated room theme:", data);
+
+    // Update the frontend only after backend update succeeds
+    setSel(id);
+
+  } catch (error) {
+    console.error("Error updating theme:", error);
+  }
+};
+
+  return (
+    <div
+      className="page"
+      style={{
+        padding: "88px 24px 28px",
+        maxWidth: 760,
+        margin: "0 auto"
+      }}
+    >
+
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div
+          className="hand"
+          style={{
+            fontSize: 32,
+            color: t.green
+          }}
+        >
+          Choose Your Room 🌸
+        </div>
+
+        <p
+          style={{
+            fontSize: 12,
+            color: t.textMuted,
+            marginTop: 4
+          }}
+        >
+          Pick an atmosphere that changes the whole vibe
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10
+        }}
+      >
+        {["default", "rain", "autumn", "novel", "cafe"].map((id) => (
+          <ThemeCard
+            key={id}
+            id={id}
+            sel={sel === id}
+            onSel={handleThemeSelect}
+            t={t}
+          />
+        ))}
+      </div>
+
+      {sel && (
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: 16,
+            fontSize: 12,
+            color: t.green,
+            fontWeight: 700,
+            animation: "fadeUp .4s ease",
+          }}
+        >
+          ✨ Room atmosphere set to {THEMES[sel]?.label}!
+        </p>
+      )}
+
+    </div>
+  );
+};
+
 
 export default Themes;

@@ -1,18 +1,93 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const WordsMini = ({ words, setWords, t }) => {
+const WordsMini = ({ roomCode, words, setWords, t }) => {
   const [w, setW] = useState("");
   const [m, setM] = useState("");
+  // Fetch all saved words belonging to the current room
+  useEffect(() => {
+    const fetchWords = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/rooms/${roomCode}/words`
+        );
 
-  const add = () => {
-    if (!w.trim()) return;
-    setWords((ws) => [
-      ...ws,
-      { id: Date.now(), word: w, meaning: m || "Look it up~", emoji: "📖", category: "vocabulary", example: "" },
-    ]);
+        if (!response.ok) {
+          throw new Error("Failed to fetch words");
+        }
+
+        const data = await response.json();
+
+        console.log("Room words:", data);
+
+        setWords(data);
+
+      } catch (error) {
+        console.error("Error fetching words:", error);
+      }
+    };
+
+    if (roomCode) {
+      fetchWords();
+    }
+  }, [roomCode, setWords]);
+  const add = async () => {
+  if (!w.trim()) return;
+
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/${roomCode}/words`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          word: w,
+          meaning: m || "Look it up~",
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to save word");
+    }
+
+    const data = await response.json();
+
+    console.log("Saved word:", data);
+
+    // Add the word returned by the backend to the UI
+    setWords((ws) => [...ws, data]);
+
     setW("");
     setM("");
-  };
+
+  } catch (error) {
+    console.error("Error saving word:", error);
+  }
+};
+const deleteWord = async (id) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/words/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete word");
+    }
+
+    console.log("Deleted word:", id);
+
+    // Remove it from the UI after backend deletion succeeds
+    setWords((ws) => ws.filter((word) => word.id !== id));
+
+  } catch (error) {
+    console.error("Error deleting word:", error);
+  }
+};
 
   return (
     <div className="card" style={{ padding: 22 }}>
@@ -43,14 +118,14 @@ const WordsMini = ({ words, setWords, t }) => {
       </div>
 
       <div style={{ maxHeight: 170, overflowY: "auto" }}>
-        {words.slice(-4).reverse().map((w2) => (
+        {words.slice(-3).reverse().map((w2) => (
           <div key={w2.id} className="wcard">
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 700, fontSize: 14, color: t.green }}>
                 {w2.emoji} {w2.word}
               </span>
               <button
-                onClick={() => setWords((ws) => ws.filter((x) => x.id !== w2.id))}
+                onClick={() => deleteWord(w2.id)}
                 style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted }}
               >
                 ×

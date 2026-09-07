@@ -1,19 +1,167 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const Goals = ({ t }) => {
-  const [todos, setTodos] = useState([
-    { id: 1, text: "Finish DSA sheet 🧩", done: false },
-    { id: 2, text: "Read 20 pages 📖", done: false },
-    { id: 3, text: "Complete assignment ✏️", done: true },
-  ]);
+const Goals = ({ roomCode, t }) => {
+  const [todos, setTodos] = useState([]);
+
   const [inp, setInp] = useState("");
+  useEffect(() => {
+    const fetchGoals = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/rooms/${roomCode}/goals`
+        );
 
-  const toggle = (id) => setTodos((ts) => ts.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
-  const add = () => {
-    if (!inp.trim()) return;
-    setTodos((ts) => [...ts, { id: Date.now(), text: inp, done: false }]);
+        if (!response.ok) {
+          throw new Error("Failed to fetch goals");
+        }
+
+        const data = await response.json();
+
+        console.log("Room goals:", data);
+
+        // setTodos(data); as we have complete in backend and done in frontend sa,e text and title 
+        // Convert backend goal format
+        // into the format our UI already uses.
+        setTodos(
+          data.map((goal) => ({
+            id: goal.id,
+            text: goal.title,
+            done: goal.completed,
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching goals:", error);
+      }
+    };
+// Only fetch when we actually have a room code
+    if (roomCode) {
+      fetchGoals();
+    }
+  }, [roomCode]);
+//chaning goal status 
+  const toggle = async (id) => {
+  // Find the clicked goal
+  const goal = todos.find((todo) => todo.id === id);
+
+  // Stop if goal doesn't exist
+  if (!goal) return;
+
+  try {
+    // Send updated status to backend
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/goals/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Toggle completed status
+        body: JSON.stringify({
+          completed: !goal.done,
+        }),
+      }
+    );
+
+    // Check if update was successful
+    if (!response.ok) {
+      throw new Error("Failed to update goal");
+    }
+
+    // Get updated goal from backend
+    const data = await response.json();
+
+    console.log("Updated goal:", data);
+
+    // Update UI with backend response
+    setTodos((ts) =>
+      ts.map((todo) =>
+        todo.id === id
+          ? {
+              ...todo,
+              done: data.completed,
+            }
+          : todo
+      )
+    );
+
+  } catch (error) {
+    // Handle API/request errors
+    console.error("Error updating goal:", error);
+  }
+};
+  //adding goal via frontend 
+  const add = async () => {
+  // Don't add empty goals
+  if (!inp.trim()) return;
+
+  try {
+    // Send new goal to backend
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/${roomCode}/goals`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Send goal title to backend
+        body: JSON.stringify({
+          title: inp,
+        }),
+      }
+    );
+
+    // Check if request was successful
+    if (!response.ok) {
+      throw new Error("Failed to create goal");
+    }
+
+    // Get created goal from backend
+    const data = await response.json();
+
+    console.log("Created goal:", data);
+
+    // Convert backend data to UI format
+    const newGoal = {
+      id: data.id,
+      text: data.title,
+      done: data.completed,
+    };
+
+    // Add new goal to the list
+    setTodos((ts) => [...ts, newGoal]);
+
+    // Clear input field
     setInp("");
-  };
+
+  } catch (error) {
+    // Handle API/request errors
+    console.error("Error creating goal:", error);
+  }
+};
+//now delete the goal 
+const deleteGoal = async (id) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/goals/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete goal");
+    }
+
+    console.log("Goal deleted:", id);
+
+    // Remove the goal from the UI
+    // only after backend deletion succeeds.
+    setTodos((ts) => ts.filter((todo) => todo.id !== id));
+
+  } catch (error) {
+    console.error("Error deleting goal:", error);
+  }
+};
 
   const done = todos.filter((t) => t.done).length;
 
@@ -52,7 +200,7 @@ const Goals = ({ t }) => {
               {todo.text}
             </span>
             <button
-              onClick={() => setTodos((ts) => ts.filter((x) => x.id !== todo.id))}
+              onClick={() => deleteGoal(todo.id)}
               style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, fontSize: 14 }}
             >
               ×

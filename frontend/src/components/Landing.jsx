@@ -3,23 +3,48 @@ import AnimeGirl from "./AnimeGirl";
 
 const Landing = ({ onEnter, t }) => {
   const [nick, setNick] = useState("");
-  const [code, setCode] = useState("");
+const [displayName, setDisplayName] = useState("");
+const [code, setCode] = useState("");
   const [mode, setMode] = useState("join");
   const [genCode, setGenCode] = useState("");
   const [err, setErr] = useState("");
+//now my backend is handling the room code generation
+  const generate = async () => {
+  setErr("");
 
-  const generate = () => {
-    const c = "DS-" + Math.random().toString(36).substr(2, 4).toUpperCase();
-    setGenCode(c);
-    setCode(c);
+  try {
+    const response = await fetch("http://localhost:8080/api/rooms", {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create room");
+    }
+
+    const data = await response.json();
+
+    setGenCode(data.roomCode);
+    setCode(data.roomCode);
     setMode("create");
-  };
 
-  const join = () => {
-    if (!nick.trim()) return setErr("Please enter a nickname ✨");
-    if (!code.trim()) return setErr("Please enter a room code 🏠");
-    onEnter(nick.trim(), code.trim());
-  };
+  } catch (error) {
+    setErr("Could not create room. Please try again.");
+  }
+};
+
+const join = () => {
+  if (!nick.trim()) return setErr("Please enter a nickname ✨");
+  if (!displayName.trim()) return setErr("Please enter a display name 🌸");
+  if (!code.trim()) return setErr("Please enter a room code 🏠");
+
+  console.log("Joining room with:", {
+    roomCode: code.trim(),
+    nickname: nick.trim(),
+    displayName: displayName.trim(),
+  });
+
+  onEnter(nick.trim(), displayName.trim(), code.trim());
+};
 
   return (
     <div
@@ -73,6 +98,15 @@ const Landing = ({ onEnter, t }) => {
               onChange={(e) => { setNick(e.target.value); setErr(""); }}
             />
           </div>
+          <div style={{ marginBottom: 14 }}>
+  <div className="lbl">Display Name</div>
+  <input
+    className="inp"
+    placeholder="e.g. Alweena 🌸"
+    value={displayName}
+    onChange={(e) => { setDisplayName(e.target.value); setErr(""); }}
+  />
+</div>
 
           <div style={{ marginBottom: mode === "create" && genCode ? 10 : 20 }}>
             <div className="lbl">Room Code</div>

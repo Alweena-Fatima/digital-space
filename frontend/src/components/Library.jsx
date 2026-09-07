@@ -1,6 +1,49 @@
 import React from "react";
 
-const Library = ({ words, setWords, quotes, setQuotes, t }) => (
+const Library = ({ roomCode,words, setWords, quotes, setQuotes, t }) => {
+  const deleteWord = async (id) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/words/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete word");
+    }
+
+    // Remove from frontend after backend deletion succeeds
+    setWords((ws) => ws.filter((word) => word.id !== id));
+
+  } catch (error) {
+    console.error("Error deleting word:", error);
+  }
+};
+
+const deleteQuote = async (id) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/rooms/quotes/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete quote");
+    }
+
+    // Remove from frontend after backend deletion succeeds
+    setQuotes((qs) => qs.filter((quote) => quote.id !== id));
+
+  } catch (error) {
+    console.error("Error deleting quote:", error);
+  }
+};
+  
+  return (
   <div className="page" style={{ padding: "88px 28px 28px", maxWidth: 980, margin: "0 auto" }}>
     <div className="hand" style={{ fontSize: 36, color: t.green, marginBottom: 5 }}>
       Your Library 📚
@@ -45,7 +88,7 @@ const Library = ({ words, setWords, quotes, setQuotes, t }) => (
                   </div>
                 </div>
                 <button
-                  onClick={() => setWords((ws) => ws.filter((x) => x.id !== w.id))}
+                  onClick={() => deleteWord(w.id)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, fontSize: 15 }}
                 >
                   ×
@@ -75,10 +118,10 @@ const Library = ({ words, setWords, quotes, setQuotes, t }) => (
         ) : (
           quotes.map((q) => (
             <div key={q.id} className="qcard" style={{ paddingTop: 24 }}>
-              <p style={{ fontSize: 14, color: t.text, lineHeight: 1.7, marginBottom: 7 }}>{q.text}</p>
+              <p style={{ fontSize: 14, color: t.text, lineHeight: 1.7, marginBottom: 7 }}>{q.quote}</p>
               <span style={{ fontSize: 12, color: t.textMuted, fontWeight: 700 }}>— {q.author}</span>
               <button
-                onClick={() => setQuotes((qs) => qs.filter((x) => x.id !== q.id))}
+                onClick={() => deleteQuote(q.id)}
                 style={{
                   float: "right",
                   background: "none",
@@ -96,6 +139,6 @@ const Library = ({ words, setWords, quotes, setQuotes, t }) => (
       </div>
     </div>
   </div>
-);
+)};
 
 export default Library;
