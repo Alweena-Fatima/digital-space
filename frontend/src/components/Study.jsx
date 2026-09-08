@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-
+import { createWebSocketClient } from "../websocket";
 const MOCK_M = [
   {
     id: 1,
@@ -39,8 +39,11 @@ const Study = ({
   const [inp, setInp] = useState("");
   const [lastSent, setLastSent] = useState(0);
   const [cd, setCd] = useState(0);
-
+  // Stores our WebSocket connection
+  // so we can disconnect it later.
+  const wsClient = useRef(null);
   const chatRef = useRef(null);
+  
 
   // Fetch all members of the room
   useEffect(() => {
@@ -96,6 +99,61 @@ const Study = ({
 
     return () => clearTimeout(timer);
   }, [cd]);
+  useEffect(() => {
+
+  if (!roomCode) return;
+
+  console.log("🔌 Connecting to WebSocket...");
+
+  wsClient.current = createWebSocketClient((client) => {
+
+    console.log("✅ Study page connected to WebSocket");
+
+    /*
+     * Subscribe to this room.
+     *
+     * Example:
+     * /topic/room/8C9AD6
+     */
+    client.subscribe(
+      `/topic/room/${roomCode}`,
+      (message) => {
+
+        const updatedMember = JSON.parse(message.body);
+
+        console.log(
+          "📢 Status update received:",
+          updatedMember
+        );
+
+        setMembers((currentMembers) =>
+          currentMembers.map((member) =>
+            member.id === updatedMember.memberId
+              ? {
+                  ...member,
+                  status: updatedMember.status,
+                }
+              : member
+          )
+        );
+      }
+    );
+
+  });
+
+  return () => {
+
+    if (wsClient.current) {
+
+      console.log("🔴 Disconnecting WebSocket");
+
+      wsClient.current.deactivate();
+
+      wsClient.current = null;
+    }
+  };
+
+}, [roomCode]);
 
   // Send message
   const send = () => {
@@ -290,52 +348,59 @@ const Study = ({
 
                 <select
                   value={myStatus}
-                  onChange={async (e) => {
-                    const newStatus = e.target.value;
+                  onChange={(e) => {
 
-                    if (!memberId) {
-                      console.error("Member ID not found");
-                      return;
-                    }
+  const newStatus = e.target.value;
 
-                    try {
-                      const response = await fetch(
-                        `http://localhost:8080/api/rooms/${roomCode}/members/${memberId}/status?status=${newStatus}`,
-                        {
-                          method: "PUT",
-                        }
-                      );
+  if (!memberId) {
+    console.error("Member ID not found");
+    return;
+  }
 
-                      if (!response.ok) {
-                        throw new Error(
-                          "Failed to update status"
-                        );
-                      }
+  /*
+   * Make sure WebSocket is connected.
+   */
+  if (!wsClient.current) {
+    console.error("WebSocket is not connected");
+    return;
+  }
 
-                      const data = await response.json();
+  /*
+   * Send status update through WebSocket.
+   */
+  wsClient.current.publish({
+    destination: "/app/status",
 
-                      console.log("Updated status:", data);
+    body: JSON.stringify({
+      roomCode: roomCode,
+      memberId: memberId,
+      displayName: displayName,
+      status: newStatus,
+    }),
+  });
 
-                      setMyStatus(newStatus);
+  /*
+   * Update our own status immediately.
+   */
+  setMyStatus(newStatus);
 
-                      // Update member list immediately
-                      setMembers((currentMembers) =>
-                        currentMembers.map((member) =>
-                          member.id === memberId
-                            ? {
-                              ...member,
-                              status: newStatus,
-                            }
-                            : member
-                        )
-                      );
-                    } catch (error) {
-                      console.error(
-                        "Error updating status:",
-                        error
-                      );
-                    }
-                  }}
+  /*
+   * Update our own member in the local UI.
+   *
+   * Other users will receive the update
+   * through WebSocket.
+   */
+  setMembers((currentMembers) =>
+    currentMembers.map((member) =>
+      member.id === memberId
+        ? {
+            ...member,
+            status: newStatus,
+          }
+        : member
+    )
+  );
+}}
                   style={{
                     fontSize: 10,
                     color: t.green,

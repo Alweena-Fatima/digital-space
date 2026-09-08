@@ -6,37 +6,45 @@ const AIWord = ({ onSave, t }) => {
   const [loading, setLoading] = useState(false);
 
   const lookup = async () => {
-    if (!word.trim()) return;
-    setLoading(true);
-    setRes(null);
-    try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 300,
-          messages: [{
-            role: "user",
-            content: `Give a cozy, friendly definition for the word "${word}". Reply ONLY with valid JSON, no markdown:
-{"word":"...","meaning":"...","example":"...","emoji":"...","category":"..."}`
-          }]
-        })
-      });
-      const d = await r.json();
-      const text = d.content?.[0]?.text || "{}";
-      setRes(JSON.parse(text.replace(/```json|```/g, "").trim()));
-    } catch {
-      setRes({
-        word,
-        meaning: "A beautiful word worth exploring~",
-        example: "Use it in your writing today!",
-        emoji: "📖",
-        category: "general",
-      });
+  if (!word.trim()) return;
+
+  setLoading(true);
+  setRes(null);
+
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/gemini/meaning?word=${encodeURIComponent(
+        word.trim()
+      )}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to get word meaning");
     }
+
+    const meaning = await response.text();
+
+    setRes({
+      word: word.trim(),
+      meaning: meaning,
+      example: "",
+      emoji: "📖",
+      category: "general",
+    });
+  } catch (error) {
+    console.error("Word lookup error:", error);
+
+    setRes({
+      word: word.trim(),
+      meaning: "Could not find the meaning. Please try again.",
+      example: "",
+      emoji: "📖",
+      category: "general",
+    });
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div className="card" style={{ padding: 22, height: "100%" }}>

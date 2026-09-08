@@ -144,7 +144,39 @@ const Home = ({
         New:
         words = [word1, word2, word3]
       */}
-      <AIWord onSave={(w) => setWords((ws) => [...ws, w])} t={t} />
+      <AIWord
+  onSave={async (w) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/rooms/${roomCode}/words`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            word: w.word,
+            meaning: w.meaning,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to save word");
+      }
+
+      const savedWord = await response.json();
+
+      console.log("Saved AI word:", savedWord);
+
+      setWords((ws) => [...ws, savedWord]);
+
+    } catch (error) {
+      console.error("Error saving AI word:", error);
+    }
+  }}
+  t={t}
+/>
 
     </div>
 
