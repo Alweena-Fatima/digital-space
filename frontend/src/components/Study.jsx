@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
 import { createWebSocketClient } from "../websocket";
+
+
+// ============================================================
+// MOCK DATA
+// ============================================================
+
 const MOCK_M = [
   {
     id: 1,
@@ -23,6 +30,11 @@ const MOCK_M = [
 
 const EMOJIS = ["🌸", "✨", "💚", "☕", "📚", "🌙"];
 
+
+// ============================================================
+// STUDY ROOM
+// ============================================================
+
 const Study = ({
   nick,
   displayName,
@@ -31,185 +43,360 @@ const Study = ({
   onLeaveRoom,
   t,
 }) => {
+  // ----------------------------------------------------------
+  // State
+  // ----------------------------------------------------------
+
   const [members, setMembers] = useState([]);
-  // const [memberId, setMemberId] = useState(null);
   const [myStatus, setMyStatus] = useState("STUDYING");
 
-  const [msgs, setMsgs] = useState(MOCK_M);
+  const [messages, setMessages] = useState([]);
   const [inp, setInp] = useState("");
-  const [lastSent, setLastSent] = useState(0);
-  const [cd, setCd] = useState(0);
-  // Stores our WebSocket connection
-  // so we can disconnect it later.
+
+
+
+  // Keeps the WebSocket connection available throughout the component.
   const wsClient = useRef(null);
+
+  // Used to automatically scroll the chat to the latest message.
   const chatRef = useRef(null);
-  
 
-  // Fetch all members of the room
+
+  // ==========================================================
+  // ROOM MEMBERS
+  // ==========================================================
+
+  // Fetch the members already present in the room.
   useEffect(() => {
-  const fetchMembers = async () => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}/members`
-      );
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/rooms/${roomCode}/members`
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch members");
+        if (!response.ok) {
+          throw new Error("Failed to fetch members");
+        }
+
+        const data = await response.json();
+
+        console.log("Room members:", data);
+
+        setMembers(data);
+
+        // Find our own member record so we can restore our status.
+        const myMember = data.find(
+          (member) => member.id === memberId
+        );
+
+        if (myMember) {
+          setMyStatus(myMember.status);
+        }
+      } catch (error) {
+        console.error("Error fetching members:", error);
       }
+    };
 
-      const data = await response.json();
-
-      console.log("Room members:", data);
-
-      setMembers(data);
-
-      // Find the current user's member record
-      const myMember = data.find(
-        (member) => member.id === memberId
-      );
-
-      if (myMember) {
-        // Restore current user's status from backend
-        setMyStatus(myMember.status);
-      }
-    } catch (error) {
-      console.error("Error fetching members:", error);
+    if (roomCode && memberId) {
+      fetchMembers();
     }
-  };
+  }, [roomCode, memberId]);
 
-  if (roomCode && memberId) {
-    fetchMembers();
-  }
-}, [roomCode, memberId]);
 
-  // Automatically scroll chat to bottom
+  // ==========================================================
+  // CHAT HISTORY
+  // ==========================================================
+
+  // Load previous messages when the user enters a room.
+  useEffect(() => {
+    if (!roomCode) return;
+
+    const loadChatHistory = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/rooms/${roomCode}/messages`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load chat history");
+        }
+
+        const data = await response.json();
+
+        setMessages(data);
+
+        console.log("💬 Chat history loaded:", data);
+      } catch (error) {
+        console.error("Error loading chat history:", error);
+      }
+    };
+
+    loadChatHistory();
+  }, [roomCode]);
+
+
+  // ==========================================================
+  // CHAT AUTO-SCROLL
+  // ==========================================================
+
+  // Whenever a new message arrives, keep the latest message visible.
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
-  }, [msgs]);
+  }, [messages]);
 
-  // Message cooldown timer
+
+  // ==========================================================
+  // MESSAGE COOLDOWN
+  // ==========================================================
+
+  // Count down the remaining time before another message can be sent.
+  // useEffect(() => {
+  //   if (cd <= 0) return;
+
+  //   const timer = setTimeout(() => {
+  //     setCd((current) => current - 1);
+  //   }, 1000);
+
+  //   return () => clearTimeout(timer);
+  // }, [cd]);
+
+
+  // ==========================================================
+  // WEBSOCKET CONNECTION
+  // ==========================================================
+
   useEffect(() => {
-    if (cd <= 0) return;
+    if (!roomCode) return;
 
-    const timer = setTimeout(() => {
-      setCd((c) => c - 1);
-    }, 1000);
+    console.log("🔌 Connecting to WebSocket...");
 
-    return () => clearTimeout(timer);
-  }, [cd]);
-  useEffect(() => {
+    wsClient.current = createWebSocketClient((client) => {
+      console.log("✅ Study page connected to WebSocket");
 
-  if (!roomCode) return;
 
-  console.log("🔌 Connecting to WebSocket...");
+      // --------------------------------------------------------
+      // Listen for member status updates
+      // --------------------------------------------------------
 
-  wsClient.current = createWebSocketClient((client) => {
+      client.subscribe(
+        `/topic/room/${roomCode}`,
+        (message) => {
+          const updatedMember = JSON.parse(message.body);
 
-    console.log("✅ Study page connected to WebSocket");
+          console.log(
+            "📢 Status update received:",
+            updatedMember
+          );
 
-    /*
-     * Subscribe to this room.
-     *
-     * Example:
-     * /topic/room/8C9AD6
-     */
-    client.subscribe(
-      `/topic/room/${roomCode}`,
-      (message) => {
-
-        const updatedMember = JSON.parse(message.body);
-
-        console.log(
-          "📢 Status update received:",
-          updatedMember
-        );
-
-        setMembers((currentMembers) =>
-          currentMembers.map((member) =>
-            member.id === updatedMember.memberId
-              ? {
+          // Update only the member whose status changed.
+          setMembers((currentMembers) =>
+            currentMembers.map((member) =>
+              member.id === updatedMember.memberId
+                ? {
                   ...member,
                   status: updatedMember.status,
                 }
-              : member
-          )
-        );
+                : member
+            )
+          );
+        }
+      );
+
+
+      // --------------------------------------------------------
+      // Listen for new chat messages
+      // --------------------------------------------------------
+
+      client.subscribe(
+        `/topic/room/${roomCode}/chat`,
+        (message) => {
+          const newMessage = JSON.parse(message.body);
+
+          console.log(
+            "💬 Chat message received:",
+            newMessage
+          );
+
+          setMessages((currentMessages) => [
+            ...currentMessages,
+            newMessage,
+          ]);
+        }
+      );
+      client.subscribe(
+        "/user/queue/errors",
+        (message) => {
+          console.log("❌ Chat error:", message.body);
+
+          alert(message.body);
+        }
+      );
+    });
+
+
+    // Disconnect when the user leaves the room/page.
+    return () => {
+      if (wsClient.current) {
+        console.log("🔴 Disconnecting WebSocket");
+
+        wsClient.current.deactivate();
+        wsClient.current = null;
       }
-    );
+    };
+  }, [roomCode]);
 
-  });
 
-  return () => {
+  // ==========================================================
+  // CHAT FUNCTIONS
+  // ==========================================================
 
-    if (wsClient.current) {
-
-      console.log("🔴 Disconnecting WebSocket");
-
-      wsClient.current.deactivate();
-
-      wsClient.current = null;
-    }
-  };
-
-}, [roomCode]);
-
-  // Send message
+  // Send a normal text message through WebSocket.
   const send = () => {
-    if (!inp.trim()) return;
 
-    const now = Date.now();
+    const trimmedMessage = inp.trim();
 
-    if (now - lastSent < 30000) {
-      setCd(Math.ceil((30000 - (now - lastSent)) / 1000));
+    // Don't send empty messages
+    if (!trimmedMessage) return;
+
+    // Member ID is required
+    if (!memberId) {
+      console.error("Member ID not found");
       return;
     }
 
-    setMsgs((m) => [
-      ...m,
-      {
-        id: Date.now(),
-        u: nick,
-        t: inp,
-        ts: new Date().toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
+    // WebSocket must be connected
+    if (!wsClient.current) {
+      console.error("WebSocket is not connected");
+      return;
+    }
 
+    /*
+     * Send message to Spring Boot.
+     *
+     * /app/chat
+     *      ↓
+     * @MessageMapping("/chat")
+     *      ↓
+     * MessageService
+     *      ↓
+     * MySQL
+     *      ↓
+     * /topic/room/{roomCode}/chat
+     */
+    wsClient.current.publish({
+      destination: "/app/chat",
+
+      body: JSON.stringify({
+        roomCode,
+        memberId,
+        content: trimmedMessage,
+      }),
+    });
+
+    // Clear input after sending
     setInp("");
-    setLastSent(now);
   };
 
-  // Send emoji reaction
-  const react = (e) => {
-    const now = Date.now();
 
-    if (now - lastSent < 30000) return;
+  // Send an emoji as a quick chat reaction.
+  const react = (emoji) => {
 
-    setMsgs((m) => [
-      ...m,
-      {
-        id: Date.now(),
-        u: nick,
-        t: e,
-        ts: new Date().toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
+    if (!memberId) {
+      console.error("Member ID not found");
+      return;
+    }
 
-    setLastSent(now);
+    if (!wsClient.current) {
+      console.error("WebSocket is not connected");
+      return;
+    }
+
+    /*
+     * Send emoji as a normal chat message.
+     *
+     * The backend will apply the same
+     * 20-second cooldown.
+     */
+    wsClient.current.publish({
+
+      destination: "/app/chat",
+
+      body: JSON.stringify({
+        roomCode,
+        memberId,
+        content: emoji,
+      }),
+
+    });
   };
+
+
+  // ==========================================================
+  // MEMBER STATUS
+  // ==========================================================
 
   const statusColor = {
     studying: t.green,
     reading: t.accent,
     break: t.textMuted,
   };
+
+
+  const updateStatus = (newStatus) => {
+    if (!memberId) {
+      console.error("Member ID not found");
+      return;
+    }
+
+    if (!wsClient.current) {
+      console.error("WebSocket is not connected");
+      return;
+    }
+
+    /*
+      Send the status update to Spring Boot.
+
+      /app/status
+          ↓
+      Backend updates the member status
+          ↓
+      /topic/room/{roomCode}
+          ↓
+      Everyone in the room sees the update
+    */
+
+    wsClient.current.publish({
+      destination: "/app/status",
+
+      body: JSON.stringify({
+        roomCode,
+        memberId,
+        displayName,
+        status: newStatus,
+      }),
+    });
+
+    // Update our own UI immediately instead of waiting for the server.
+    setMyStatus(newStatus);
+
+    setMembers((currentMembers) =>
+      currentMembers.map((member) =>
+        member.id === memberId
+          ? {
+            ...member,
+            status: newStatus,
+          }
+          : member
+      )
+    );
+  };
+
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
     <div
@@ -220,6 +407,8 @@ const Study = ({
         margin: "0 auto",
       }}
     >
+
+      {/* Page heading */}
       <div
         className="hand"
         style={{
@@ -231,6 +420,7 @@ const Study = ({
         Study Together 🌿
       </div>
 
+
       <div
         style={{
           display: "grid",
@@ -238,7 +428,11 @@ const Study = ({
           gap: 18,
         }}
       >
-        {/* Sidebar */}
+
+        {/* ====================================================
+            SIDEBAR
+        ==================================================== */}
+
         <div
           style={{
             display: "flex",
@@ -246,7 +440,11 @@ const Study = ({
             gap: 14,
           }}
         >
-          {/* Room */}
+
+          {/* --------------------------------------------------
+              Room information
+          -------------------------------------------------- */}
+
           <div className="card" style={{ padding: 18 }}>
             <div
               className="hand"
@@ -270,7 +468,7 @@ const Study = ({
                 letterSpacing: 2,
                 color: t.green,
                 textAlign: "center",
-                fontFamily: "'Caveat',cursive",
+                fontFamily: "'Caveat', cursive",
               }}
             >
               {roomCode}
@@ -290,7 +488,11 @@ const Study = ({
             </button>
           </div>
 
-          {/* Members */}
+
+          {/* --------------------------------------------------
+              Room members
+          -------------------------------------------------- */}
+
           <div className="card" style={{ padding: 18 }}>
             <div
               className="hand"
@@ -301,6 +503,7 @@ const Study = ({
               }}
             >
               👥 Online ({members.length}/6)
+
               <button
                 onClick={onLeaveRoom}
                 style={{
@@ -341,66 +544,17 @@ const Study = ({
                     color: t.green,
                   }}
                 >
-                  {members.find((member) => member.id === memberId)
-                    ?.displayName || nick}{" "}
+                  {members.find(
+                    (member) => member.id === memberId
+                  )?.displayName || nick}{" "}
                   (you)
                 </div>
 
                 <select
                   value={myStatus}
-                  onChange={(e) => {
-
-  const newStatus = e.target.value;
-
-  if (!memberId) {
-    console.error("Member ID not found");
-    return;
-  }
-
-  /*
-   * Make sure WebSocket is connected.
-   */
-  if (!wsClient.current) {
-    console.error("WebSocket is not connected");
-    return;
-  }
-
-  /*
-   * Send status update through WebSocket.
-   */
-  wsClient.current.publish({
-    destination: "/app/status",
-
-    body: JSON.stringify({
-      roomCode: roomCode,
-      memberId: memberId,
-      displayName: displayName,
-      status: newStatus,
-    }),
-  });
-
-  /*
-   * Update our own status immediately.
-   */
-  setMyStatus(newStatus);
-
-  /*
-   * Update our own member in the local UI.
-   *
-   * Other users will receive the update
-   * through WebSocket.
-   */
-  setMembers((currentMembers) =>
-    currentMembers.map((member) =>
-      member.id === memberId
-        ? {
-            ...member,
-            status: newStatus,
-          }
-        : member
-    )
-  );
-}}
+                  onChange={(e) =>
+                    updateStatus(e.target.value)
+                  }
                   style={{
                     fontSize: 10,
                     color: t.green,
@@ -411,12 +565,21 @@ const Study = ({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="STUDYING">● studying</option>
-                  <option value="READING">● reading</option>
-                  <option value="BREAK">● break</option>
+                  <option value="STUDYING">
+                    ● studying
+                  </option>
+
+                  <option value="READING">
+                    ● reading
+                  </option>
+
+                  <option value="BREAK">
+                    ● break
+                  </option>
                 </select>
               </div>
             </div>
+
 
             {/* Other members */}
             {members
@@ -444,7 +607,8 @@ const Study = ({
                         color: t.text,
                       }}
                     >
-                      {member.displayName || member.nickname}
+                      {member.displayName ||
+                        member.nickname}
                     </div>
 
                     <div
@@ -465,7 +629,11 @@ const Study = ({
           </div>
         </div>
 
-        {/* Chat */}
+
+        {/* ====================================================
+            CHAT
+        ==================================================== */}
+
         <div
           className="card"
           style={{
@@ -475,6 +643,8 @@ const Study = ({
             height: 500,
           }}
         >
+
+          {/* Chat heading */}
           <div
             className="hand"
             style={{
@@ -496,6 +666,8 @@ const Study = ({
             🕊️ Keep it peaceful · 1 message per 30 seconds
           </p>
 
+
+          {/* Message list */}
           <div
             ref={chatRef}
             style={{
@@ -507,8 +679,9 @@ const Study = ({
               paddingRight: 3,
             }}
           >
-            {msgs.map((msg) => {
-              const me = msg.u === nick;
+            {messages.map((msg) => {
+
+              const me = msg.memberId === memberId;
 
               return (
                 <div
@@ -521,6 +694,8 @@ const Study = ({
                       : "flex-start",
                   }}
                 >
+
+                  {/* Show sender name for other users */}
                   {!me && (
                     <span
                       style={{
@@ -531,15 +706,14 @@ const Study = ({
                         fontWeight: 600,
                       }}
                     >
-                      {msg.u}
+                      {msg.Username}
                     </span>
                   )}
 
                   <div
-                    className={`bubble ${me ? "me" : "them"
-                      }`}
+                    className={`bubble ${me ? "me" : "them"}`}
                   >
-                    {msg.t}
+                    {msg.content}
                   </div>
 
                   <span
@@ -550,98 +724,98 @@ const Study = ({
                       [me ? "marginRight" : "marginLeft"]: 7,
                     }}
                   >
-                    {msg.ts}
+                    {new Date(msg.sentAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
+
                 </div>
               );
             })}
-          </div>
 
-          {/* Emoji reactions */}
-          <div
-            style={{
-              display: "flex",
-              gap: 5,
-              padding: "8px 0 7px",
-            }}
-          >
-            {EMOJIS.map((e) => (
-              <button
-                key={e}
-                onClick={() => react(e)}
-                style={{
-                  background: t.inputBg,
-                  border: `1.5px solid ${t.inputBorder}`,
-                  borderRadius: 50,
-                  padding: "3px 7px",
-                  fontSize: 14,
-                  cursor: "pointer",
-                  transition: "all .2s",
+
+            {/* --------------------------------------------------
+              Emoji reactions
+          -------------------------------------------------- */}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 5,
+                padding: "8px 0 7px",
+              }}
+            >
+              {EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => react(emoji)}
+                  style={{
+                    background: t.inputBg,
+                    border: `1.5px solid ${t.inputBorder}`,
+                    borderRadius: 50,
+                    padding: "3px 7px",
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all .2s",
+                  }}
+                  onMouseOver={(e) =>
+                  (e.currentTarget.style.transform =
+                    "scale(1.2)")
+                  }
+                  onMouseOut={(e) =>
+                  (e.currentTarget.style.transform =
+                    "scale(1)")
+                  }
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+
+            {/* --------------------------------------------------
+              Message input
+          -------------------------------------------------- */}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 7,
+                borderTop: `1px solid ${t.inputBorder}`,
+                paddingTop: 10,
+              }}
+            >
+              <input
+                className="inp"
+                placeholder="Send a message..."
+                value={inp}
+                onChange={(e) => setInp(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    send();
+                  }
                 }}
-                onMouseOver={(ev) =>
-                (ev.currentTarget.style.transform =
-                  "scale(1.2)")
-                }
-                onMouseOut={(ev) =>
-                (ev.currentTarget.style.transform =
-                  "scale(1)")
-                }
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                }}
+              />
+
+              <button
+                className="btn-g"
+                style={{
+                  padding: "10px 14px",
+                  fontSize: 13,
+                }}
+                onClick={send}
               >
-                {e}
+                Send
               </button>
-            ))}
+            </div>
+
+
           </div>
-
-          {/* Message input */}
-          <div
-            style={{
-              display: "flex",
-              gap: 7,
-              borderTop: `1px solid ${t.inputBorder}`,
-              paddingTop: 10,
-            }}
-          >
-            <input
-              className="inp"
-              placeholder="Send a message..."
-              value={inp}
-              onChange={(e) => setInp(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && send()
-              }
-              style={{
-                flex: 1,
-                fontSize: 13,
-              }}
-              disabled={cd > 0}
-            />
-
-            <button
-              className="btn-g"
-              style={{
-                padding: "10px 14px",
-                fontSize: 13,
-              }}
-              onClick={send}
-              disabled={cd > 0}
-            >
-              {cd > 0 ? `${cd}s` : "Send"}
-            </button>
-          </div>
-
-          {cd > 0 && (
-            <p
-              style={{
-                fontSize: 11,
-                color: t.accent,
-                textAlign: "center",
-                marginTop: 5,
-                fontWeight: 600,
-              }}
-            >
-              🕊️ Wait {cd}s to keep the room peaceful~
-            </p>
-          )}
         </div>
       </div>
     </div>
@@ -649,3 +823,4 @@ const Study = ({
 };
 
 export default Study;
+
