@@ -1,8 +1,82 @@
-import React, { useState, useEffect } from "react";
 
+import React, { useState, useEffect, useRef } from "react";
+import { createWebSocketClient } from "../websocket";
 const QuotesMini = ({ roomCode,quotes, setQuotes, t }) => {
   const [inp, setInp] = useState("");
   const [auth, setAuth] = useState("");
+   const wsClient = useRef(null);
+   // Listen for real-time quote changes
+useEffect(() => {
+
+  if (!roomCode) return;
+
+  console.log("🔌 Connecting Quotes WebSocket...");
+
+  wsClient.current = createWebSocketClient((client) => {
+
+    console.log("✅ Quotes WebSocket connected");
+
+    client.subscribe(
+      `/topic/room/${roomCode}/quotes`,
+      (message) => {
+
+        const quoteUpdate =
+          JSON.parse(message.body);
+
+        console.log(
+          "💬 Quote update received:",
+          quoteUpdate
+        );
+
+        // =======================
+        // CREATE
+        // =======================
+
+        if (quoteUpdate.action === "CREATE") {
+
+          const quote = quoteUpdate.quote;
+
+          setQuotes((currentQuotes) => [
+            ...currentQuotes,
+            quote,
+          ]);
+        }
+
+        // =======================
+        // DELETE
+        // =======================
+
+        if (quoteUpdate.action === "DELETE") {
+
+          const deletedQuoteId =
+            quoteUpdate.quoteId;
+
+          setQuotes((currentQuotes) =>
+            currentQuotes.filter(
+              (quote) =>
+                quote.id !== deletedQuoteId
+            )
+          );
+        }
+      }
+    );
+  });
+
+  // Cleanup WebSocket when component unmounts
+  return () => {
+
+    if (wsClient.current) {
+
+      console.log(
+        "🔴 Disconnecting Quotes WebSocket"
+      );
+
+      wsClient.current.deactivate();
+      wsClient.current = null;
+    }
+  };
+
+}, [roomCode, setQuotes]);
   // Fetch quotes saved for this room from the backend
 useEffect(() => {
   const fetchQuotes = async () => {
@@ -54,14 +128,12 @@ useEffect(() => {
 
     const data = await response.json();
 
-    console.log("Saved quote:", data);
+console.log("Saved quote:", data);
 
-    // Backend returns the newly created quote.
-    // Add it to the UI.
-    setQuotes((q) => [...q, data]);
+// WebSocket CREATE event will update the UI.
 
-    setInp("");
-    setAuth("");
+setInp("");
+setAuth("");
 
   } catch (error) {
     console.error("Error saving quote:", error);
@@ -82,8 +154,7 @@ const deleteQuote = async (id) => {
 
     console.log("Deleted quote:", id);
 
-    // Remove the deleted quote from the UI
-    setQuotes((qs) => qs.filter((quote) => quote.id !== id));
+// WebSocket DELETE event will update the UI.
 
   } catch (error) {
     console.error("Error deleting quote:", error);
