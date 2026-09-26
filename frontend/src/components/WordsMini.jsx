@@ -1,8 +1,85 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createWebSocketClient } from "../websocket";
 
 const WordsMini = ({ roomCode, words, setWords, t }) => {
   const [w, setW] = useState("");
   const [m, setM] = useState("");
+  const wsClient = useRef(null);
+  // Listen for real-time word changes
+useEffect(() => {
+
+  if (!roomCode) return;
+
+  console.log("🔌 Connecting Words WebSocket...");
+
+  wsClient.current = createWebSocketClient((client) => {
+
+    console.log("✅ Words WebSocket connected");
+
+    client.subscribe(
+      `/topic/room/${roomCode}/words`,
+      (message) => {
+
+        const wordUpdate = JSON.parse(message.body);
+
+        console.log(
+          "📝 Word update received:",
+          wordUpdate
+        );
+
+
+        // =======================
+        // CREATE
+        // =======================
+
+        if (wordUpdate.action === "CREATE") {
+
+          const word = wordUpdate.word;
+
+          setWords((currentWords) => [
+            ...currentWords,
+            word,
+          ]);
+        }
+
+
+        // =======================
+        // DELETE
+        // =======================
+
+        if (wordUpdate.action === "DELETE") {
+
+          const deletedWordId =
+            wordUpdate.wordId;
+
+          setWords((currentWords) =>
+            currentWords.filter(
+              (word) =>
+                word.id !== deletedWordId
+            )
+          );
+        }
+
+      }
+    );
+  });
+
+
+  // Cleanup WebSocket when component unmounts
+  return () => {
+
+    if (wsClient.current) {
+
+      console.log(
+        "🔴 Disconnecting Words WebSocket"
+      );
+
+      wsClient.current.deactivate();
+      wsClient.current = null;
+    }
+  };
+
+}, [roomCode, setWords]);
   // Fetch all saved words belonging to the current room
   useEffect(() => {
     const fetchWords = async () => {
@@ -54,13 +131,13 @@ const WordsMini = ({ roomCode, words, setWords, t }) => {
 
     const data = await response.json();
 
-    console.log("Saved word:", data);
+  console.log("Saved word:", data);
 
-    // Add the word returned by the backend to the UI
-    setWords((ws) => [...ws, data]);
+  // Do not update words here.
+  // WebSocket CREATE event will update the UI.
 
-    setW("");
-    setM("");
+  setW("");
+  setM("");
 
   } catch (error) {
     console.error("Error saving word:", error);
