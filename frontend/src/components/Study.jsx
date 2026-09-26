@@ -48,10 +48,12 @@ const Study = ({
   // ----------------------------------------------------------
 
   const [members, setMembers] = useState([]);
-  const [myStatus, setMyStatus] = useState("STUDYING");
+const [myStatus, setMyStatus] = useState("STUDYING");
 
-  const [messages, setMessages] = useState([]);
-  const [inp, setInp] = useState("");
+const [messages, setMessages] = useState([]);
+const [inp, setInp] = useState("");
+
+const [goals, setGoals] = useState("");
 
 
 

@@ -1,9 +1,91 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createWebSocketClient } from "../websocket";
 
 const Goals = ({ roomCode, t }) => {
   const [todos, setTodos] = useState([]);
 
   const [inp, setInp] = useState("");
+  // Keeps the WebSocket connection available
+  // while the Goals component is mounted.
+  const wsClient = useRef(null);
+  // Listen for real-time goal changes
+  useEffect(() => {
+
+    if (!roomCode) return;
+
+    wsClient.current = createWebSocketClient((client) => {
+
+      console.log("✅ Goals WebSocket connected");
+
+      client.subscribe(
+        `/topic/room/${roomCode}/goals`,
+        (message) => {
+
+          const goalUpdate = JSON.parse(message.body);
+
+          console.log(
+            "🎯 Goal update received:",
+            goalUpdate
+          );
+
+          // New goal
+          if (goalUpdate.action === "CREATE") {
+
+            const goal = goalUpdate.goal;
+
+            setTodos((currentTodos) => [
+              ...currentTodos,
+              {
+                id: goal.id,
+                text: goal.title,
+                done: goal.completed,
+              },
+            ]);
+          }
+          // Updated goal
+          if (goalUpdate.action === "UPDATE") {
+
+            const goal = goalUpdate.goal;
+
+            setTodos((currentTodos) =>
+              currentTodos.map((todo) =>
+                todo.id === goal.id
+                  ? {
+                    ...todo,
+                    text: goal.title,
+                    done: goal.completed,
+                  }
+                  : todo
+              )
+            );
+          }
+          if (goalUpdate.action === "DELETE") {
+
+            const deletedGoalId = goalUpdate.goalId;
+
+            setTodos((currentTodos) =>
+              currentTodos.filter(
+                (todo) => todo.id !== deletedGoalId
+              )
+            );
+          }
+
+        }
+      );
+    });
+
+    return () => {
+
+      if (wsClient.current) {
+
+        wsClient.current.deactivate();
+        wsClient.current = null;
+
+      }
+
+    };
+
+  }, [roomCode]);
   useEffect(() => {
     const fetchGoals = async () => {
       try {
@@ -33,135 +115,128 @@ const Goals = ({ roomCode, t }) => {
         console.error("Error fetching goals:", error);
       }
     };
-// Only fetch when we actually have a room code
+
+    // Only fetch when we actually have a room code
     if (roomCode) {
       fetchGoals();
     }
   }, [roomCode]);
-//chaning goal status 
+  //chaning goal status 
   const toggle = async (id) => {
-  // Find the clicked goal
-  const goal = todos.find((todo) => todo.id === id);
+    // Find the clicked goal
+    const goal = todos.find((todo) => todo.id === id);
 
-  // Stop if goal doesn't exist
-  if (!goal) return;
+    // Stop if goal doesn't exist
+    if (!goal) return;
 
-  try {
-    // Send updated status to backend
-    const response = await fetch(
-      `http://localhost:8080/api/rooms/goals/${id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Toggle completed status
-        body: JSON.stringify({
-          completed: !goal.done,
-        }),
+    try {
+      // Send updated status to backend
+      const response = await fetch(
+        `http://localhost:8080/api/rooms/goals/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Toggle completed status
+          body: JSON.stringify({
+            completed: !goal.done,
+          }),
+        }
+      );
+
+      // Check if update was successful
+      if (!response.ok) {
+        throw new Error("Failed to update goal");
       }
-    );
 
-    // Check if update was successful
-    if (!response.ok) {
-      throw new Error("Failed to update goal");
-    }
+      // Get updated goal from backend
+      const data = await response.json();
 
-    // Get updated goal from backend
-    const data = await response.json();
+      console.log("Updated goal:", data);
 
-    console.log("Updated goal:", data);
-
-    // Update UI with backend response
-    setTodos((ts) =>
-      ts.map((todo) =>
-        todo.id === id
-          ? {
+      // Update UI with backend response
+      setTodos((ts) =>
+        ts.map((todo) =>
+          todo.id === id
+            ? {
               ...todo,
               done: data.completed,
             }
-          : todo
-      )
-    );
+            : todo
+        )
+      );
 
-  } catch (error) {
-    // Handle API/request errors
-    console.error("Error updating goal:", error);
-  }
-};
+    } catch (error) {
+      // Handle API/request errors
+      console.error("Error updating goal:", error);
+    }
+  };
   //adding goal via frontend 
   const add = async () => {
-  // Don't add empty goals
-  if (!inp.trim()) return;
+    // Don't add empty goals
+    if (!inp.trim()) return;
 
-  try {
-    // Send new goal to backend
-    const response = await fetch(
-      `http://localhost:8080/api/rooms/${roomCode}/goals`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Send goal title to backend
-        body: JSON.stringify({
-          title: inp,
-        }),
+    try {
+      // Send new goal to backend
+      const response = await fetch(
+        `http://localhost:8080/api/rooms/${roomCode}/goals`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Send goal title to backend
+          body: JSON.stringify({
+            title: inp,
+          }),
+        }
+      );
+
+      // Check if request was successful
+      if (!response.ok) {
+        throw new Error("Failed to create goal");
       }
-    );
 
-    // Check if request was successful
-    if (!response.ok) {
-      throw new Error("Failed to create goal");
+      const data = await response.json();
+
+      console.log("Created goal:", data);
+
+      // Do not update todos here.
+      // WebSocket CREATE event will update the UI.
+
+      // Clear input field
+      setInp("");
+
+    } catch (error) {
+      // Handle API/request errors
+      console.error("Error creating goal:", error);
     }
+  };
+  //now delete the goal 
+  const deleteGoal = async (id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/rooms/goals/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    // Get created goal from backend
-    const data = await response.json();
-
-    console.log("Created goal:", data);
-
-    // Convert backend data to UI format
-    const newGoal = {
-      id: data.id,
-      text: data.title,
-      done: data.completed,
-    };
-
-    // Add new goal to the list
-    setTodos((ts) => [...ts, newGoal]);
-
-    // Clear input field
-    setInp("");
-
-  } catch (error) {
-    // Handle API/request errors
-    console.error("Error creating goal:", error);
-  }
-};
-//now delete the goal 
-const deleteGoal = async (id) => {
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/rooms/goals/${id}`,
-      {
-        method: "DELETE",
+      if (!response.ok) {
+        throw new Error("Failed to delete goal");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to delete goal");
+      console.log("Goal deleted:", id);
+
+      // Remove the goal from the UI
+      // only after backend deletion succeeds.
+      setTodos((ts) => ts.filter((todo) => todo.id !== id));
+
+    } catch (error) {
+      console.error("Error deleting goal:", error);
     }
-
-    console.log("Goal deleted:", id);
-
-    // Remove the goal from the UI
-    // only after backend deletion succeeds.
-    setTodos((ts) => ts.filter((todo) => todo.id !== id));
-
-  } catch (error) {
-    console.error("Error deleting goal:", error);
-  }
-};
+  };
 
   const done = todos.filter((t) => t.done).length;
 
