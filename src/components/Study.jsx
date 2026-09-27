@@ -41,7 +41,7 @@ const Study = ({
   memberId,
   roomCode,
   onLeaveRoom,
-  t,
+  theme,
 }) => {
   // ----------------------------------------------------------
   // State
@@ -340,9 +340,9 @@ const [goals, setGoals] = useState("");
   // ==========================================================
 
   const statusColor = {
-    studying: t.green,
-    reading: t.accent,
-    break: t.textMuted,
+    studying:theme.green,
+    reading:theme.accent,
+    break:theme.textMuted,
   };
 
 
@@ -415,7 +415,7 @@ const [goals, setGoals] = useState("");
         className="hand"
         style={{
           fontSize: 32,
-          color: t.green,
+          color:theme.green,
           marginBottom: 22,
         }}
       >
@@ -452,7 +452,7 @@ const [goals, setGoals] = useState("");
               className="hand"
               style={{
                 fontSize: 18,
-                color: t.green,
+                color:theme.green,
                 marginBottom: 10,
               }}
             >
@@ -461,14 +461,14 @@ const [goals, setGoals] = useState("");
 
             <div
               style={{
-                background: t.bgLight,
+                background:theme.bgLight,
                 borderRadius: 10,
                 padding: "11px 14px",
                 marginBottom: 9,
                 fontWeight: 700,
                 fontSize: 18,
                 letterSpacing: 2,
-                color: t.green,
+                color:theme.green,
                 textAlign: "center",
                 fontFamily: "'Caveat', cursive",
               }}
@@ -500,7 +500,7 @@ const [goals, setGoals] = useState("");
               className="hand"
               style={{
                 fontSize: 18,
-                color: t.green,
+                color:theme.green,
                 marginBottom: 10,
               }}
             >
@@ -531,9 +531,9 @@ const [goals, setGoals] = useState("");
                 gap: 9,
                 padding: "7px 9px",
                 borderRadius: 11,
-                background: t.badge,
+                background:theme.badge,
                 marginBottom: 7,
-                border: `1px solid ${t.green}28`,
+                border: `1px solid ${theme.green}28`,
               }}
             >
               <span style={{ fontSize: 18 }}>🌟</span>
@@ -543,7 +543,7 @@ const [goals, setGoals] = useState("");
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: t.green,
+                    color:theme.green,
                   }}
                 >
                   {members.find(
@@ -559,7 +559,7 @@ const [goals, setGoals] = useState("");
                   }
                   style={{
                     fontSize: 10,
-                    color: t.green,
+                    color:theme.green,
                     fontWeight: 600,
                     background: "transparent",
                     border: "none",
@@ -595,7 +595,7 @@ const [goals, setGoals] = useState("");
                     gap: 9,
                     padding: "7px 9px",
                     borderRadius: 11,
-                    background: t.bgLight,
+                    background:theme.bgLight,
                     marginBottom: 5,
                   }}
                 >
@@ -606,7 +606,7 @@ const [goals, setGoals] = useState("");
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
-                        color: t.text,
+                        color:theme.text,
                       }}
                     >
                       {member.displayName ||
@@ -619,7 +619,7 @@ const [goals, setGoals] = useState("");
                         color:
                           statusColor[
                           member.status?.toLowerCase()
-                          ] || t.textMuted,
+                          ] ||theme.textMuted,
                         fontWeight: 600,
                       }}
                     >
@@ -651,7 +651,7 @@ const [goals, setGoals] = useState("");
             className="hand"
             style={{
               fontSize: 18,
-              color: t.green,
+              color:theme.green,
               marginBottom: 3,
             }}
           >
@@ -661,7 +661,7 @@ const [goals, setGoals] = useState("");
           <p
             style={{
               fontSize: 11,
-              color: t.textMuted,
+              color:theme.textMuted,
               marginBottom: 12,
             }}
           >
@@ -702,7 +702,7 @@ const [goals, setGoals] = useState("");
                     <span
                       style={{
                         fontSize: 10,
-                        color: t.textMuted,
+                        color:theme.textMuted,
                         marginBottom: 3,
                         marginLeft: 7,
                         fontWeight: 600,
@@ -721,7 +721,7 @@ const [goals, setGoals] = useState("");
                   <span
                     style={{
                       fontSize: 9,
-                      color: t.textMuted,
+                      color:theme.textMuted,
                       marginTop: 2,
                       [me ? "marginRight" : "marginLeft"]: 7,
                     }}
@@ -753,8 +753,8 @@ const [goals, setGoals] = useState("");
                   key={emoji}
                   onClick={() => react(emoji)}
                   style={{
-                    background: t.inputBg,
-                    border: `1.5px solid ${t.inputBorder}`,
+                    background:theme.inputBg,
+                    border: `1.5px solid ${theme.inputBorder}`,
                     borderRadius: 50,
                     padding: "3px 7px",
                     fontSize: 14,
@@ -784,7 +784,7 @@ const [goals, setGoals] = useState("");
               style={{
                 display: "flex",
                 gap: 7,
-                borderTop: `1px solid ${t.inputBorder}`,
+                borderTop: `1px solid ${theme.inputBorder}`,
                 paddingTop: 10,
               }}
             >

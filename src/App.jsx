@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from "react";
+
 import { getTheme } from "./theme";
 import GlobalStyles from "./components/GlobalStyles";
 import Navbar from "./components/Navbar";
@@ -11,21 +13,28 @@ import About from "./components/About";
 import BackgroundEffects from "./BackgroundEffects";
 
 export default function App() {
+  // Controls whether the user is on the landing page or inside the app.
   const [screen, setScreen] = useState("landing");
 
+  // Remembers which page the user was viewing before a refresh.
   const [page, setPage] = useState(
     localStorage.getItem("digitalSpacePage") || "home"
   );
 
-  const [nick, setNick] = useState("");
+  // Current room/member information.
+  const [nickname, setNickname] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [memberId, setMemberId] = useState(null);
   const [roomCode, setRoomCode] = useState("");
+
+  // Current room theme.
   const [themeKey, setThemeKey] = useState("default");
 
-  const [run, setRun] = useState(false);
-  const [words, setWords] = useState([]);
+  // Pomodoro state is shared with the home dashboard and ambient sounds.
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false);
 
+  // Shared room resources.
+  const [words, setWords] = useState([]);
   const [quotes, setQuotes] = useState([
     {
       id: 1,
@@ -34,43 +43,49 @@ export default function App() {
     },
   ]);
 
-  const t = getTheme(themeKey);
+  // Get the complete color/style configuration for the selected theme.
+  const theme = getTheme(themeKey);
 
-  // ---------------------------------------
+  // =========================================================
   // RESTORE ROOM AFTER PAGE REFRESH
-  // ---------------------------------------
+  // =========================================================
+
   useEffect(() => {
-    const savedNick = localStorage.getItem("digitalSpaceNick");
+    const savedNickname = localStorage.getItem("digitalSpaceNick");
     const savedDisplayName = localStorage.getItem(
       "digitalSpaceDisplayName"
     );
-    const savedRoom = localStorage.getItem("digitalSpaceRoom");
+    const savedRoomCode = localStorage.getItem("digitalSpaceRoom");
     const savedMemberId = localStorage.getItem(
       "digitalSpaceMemberId"
     );
     const savedPage = localStorage.getItem("digitalSpacePage");
 
-    console.log("Restoring saved room:", {
-      savedNick,
-      savedDisplayName,
-      savedRoom,
-      savedMemberId,
-      savedPage,
-    });
-
-    if (savedNick && savedRoom && savedMemberId) {
-      // Restore frontend state
-      setNick(savedNick);
-      setDisplayName(savedDisplayName || savedNick);
-      setRoomCode(savedRoom);
+    /*
+     * If the required room information exists, restore the
+     * user's previous room session.
+     */
+    if (
+      savedNickname &&
+      savedRoomCode &&
+      savedMemberId
+    ) {
+      setNickname(savedNickname);
+      setDisplayName(savedDisplayName || savedNickname);
+      setRoomCode(savedRoomCode);
       setMemberId(Number(savedMemberId));
 
       if (savedPage) {
         setPage(savedPage);
       }
 
-      // Get latest room information from backend
-      fetch(`http://localhost:8080/api/rooms/${savedRoom}`)
+      /*
+       * Fetch the room again instead of trusting the locally
+       * stored theme. The backend is the source of truth.
+       */
+      fetch(
+        `http://localhost:8080/api/rooms/${savedRoomCode}`
+      )
         .then((response) => {
           if (!response.ok) {
             throw new Error("Room not found");
@@ -79,25 +94,30 @@ export default function App() {
           return response.json();
         })
         .then((roomData) => {
-          console.log("Restored room:", roomData);
-
           setThemeKey(roomData.theme.toLowerCase());
           setScreen("app");
         })
         .catch((error) => {
+          /*
+           * Keep the saved session if the failure is temporary,
+           * such as the backend being unavailable.
+           */
           console.error("Error restoring room:", error);
-
-          // Do NOT clear localStorage here.
-          // A temporary backend/network error should not log the user out.
         });
     }
   }, []);
 
-  // ---------------------------------------
+  // =========================================================
   // JOIN ROOM
-  // ---------------------------------------
-  const enter = async (n, displayName, c) => {
+  // =========================================================
+
+  const enterRoom = async (
+    nickname,
+    displayName,
+    roomCode
+  ) => {
     try {
+      // Ask the backend to add this member to the room.
       const response = await fetch(
         "http://localhost:8080/api/rooms/join",
         {
@@ -106,9 +126,9 @@ export default function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            roomCode: c,
-            nickname: n,
-            displayName: displayName,
+            roomCode,
+            nickname,
+            displayName,
           }),
         }
       );
@@ -117,13 +137,14 @@ export default function App() {
         throw new Error("Failed to join room");
       }
 
-      const data = await response.json();
+      const memberData = await response.json();
 
-      console.log("Joined room:", data);
-
-      // Get room details after joining
+      /*
+       * Fetch the room after joining so we get the current
+       * room theme from the backend.
+       */
       const roomResponse = await fetch(
-        `http://localhost:8080/api/rooms/${c}`
+        `http://localhost:8080/api/rooms/${roomCode}`
       );
 
       if (!roomResponse.ok) {
@@ -132,46 +153,35 @@ export default function App() {
 
       const roomData = await roomResponse.json();
 
-      console.log("Room details:", roomData);
-
-      // ---------------------------------------
-      // UPDATE REACT STATE
-      // ---------------------------------------
-
-      setNick(data.nickname);
-      setDisplayName(data.displayName);
-      setMemberId(data.id);
-      setRoomCode(c);
+      // Update React state with the joined member's information.
+      setNickname(memberData.nickname);
+      setDisplayName(memberData.displayName);
+      setMemberId(memberData.id);
+      setRoomCode(roomCode);
       setThemeKey(roomData.theme.toLowerCase());
 
-      // ---------------------------------------
-      // SAVE ROOM SESSION
-      // ---------------------------------------
-
+      // Save the room session so it can be restored after refresh.
       localStorage.setItem(
         "digitalSpaceMemberId",
-        data.id
+        memberData.id
       );
 
       localStorage.setItem(
         "digitalSpaceNick",
-        data.nickname
+        memberData.nickname
       );
 
       localStorage.setItem(
         "digitalSpaceDisplayName",
-        data.displayName
+        memberData.displayName
       );
 
       localStorage.setItem(
         "digitalSpaceRoom",
-        c
+        roomCode
       );
 
-      console.log("Room session saved.");
-
       setScreen("app");
-
     } catch (error) {
       console.error("Join room error:", error);
 
@@ -180,8 +190,14 @@ export default function App() {
       );
     }
   };
+
+  // =========================================================
+  // LEAVE ROOM
+  // =========================================================
+
   const handleLeaveRoom = async () => {
     try {
+      // Remove the member from the room in the database.
       const response = await fetch(
         `http://localhost:8080/api/rooms/${roomCode}/members/${memberId}`,
         {
@@ -193,84 +209,88 @@ export default function App() {
         throw new Error("Failed to leave room");
       }
 
-      // Clear saved room session
+      // Remove the saved room session.
       localStorage.removeItem("digitalSpaceMemberId");
       localStorage.removeItem("digitalSpaceNick");
       localStorage.removeItem("digitalSpaceDisplayName");
       localStorage.removeItem("digitalSpaceRoom");
       localStorage.removeItem("digitalSpacePage");
 
-      // Reset React state
+      // Reset the room-related React state.
       setMemberId(null);
-      setNick("");
+      setNickname("");
       setDisplayName("");
       setRoomCode("");
       setPage("home");
       setThemeKey("default");
 
-      // Go back to landing page
+      // Return to the landing page.
       setScreen("landing");
-
     } catch (error) {
       console.error("Leave room error:", error);
-      alert("Could not leave the room. Please try again.");
+
+      alert(
+        "Could not leave the room. Please try again."
+      );
     }
   };
+
   return (
     <>
-      <GlobalStyles t={t} />
+      <GlobalStyles theme={theme} />
 
       {screen === "landing" ? (
         <Landing
-          onEnter={enter}
-          t={t}
+          onEnter={enterRoom}
+          theme={theme}
         />
       ) : (
         <div
           style={{
             minHeight: "100vh",
-            background: t.pageBg,
+            background: theme.pageBg,
             transition: "background 0.6s ease",
             position: "relative",
             zIndex: 1,
           }}
         >
-          <BackgroundEffects effect={t.bgEffect} />
+          <BackgroundEffects effect={theme.bgEffect} />
 
           <Navbar
             page={page}
             setPage={(newPage) => {
               setPage(newPage);
-
               localStorage.setItem(
                 "digitalSpacePage",
                 newPage
               );
             }}
-            nick={displayName}
-            t={t}
+            displayName={displayName}
+            theme={theme}
           />
 
           {/* HOME */}
+
           <div
             style={{
               display: page === "home" ? "block" : "none",
             }}
           >
             <Home
-              nick={displayName}
+              nickname={displayName}
               roomCode={roomCode}
               words={words}
               setWords={setWords}
               quotes={quotes}
               setQuotes={setQuotes}
-              t={t}
-              run={run}
-              setRun={setRun}
+              theme={theme}
+              isPomodoroRunning={isPomodoroRunning}
+              setIsPomodoroRunning={setIsPomodoroRunning}
             />
           </div>
 
           {/* THEMES */}
+
           <div
             style={{
               display: page === "themes" ? "block" : "none",
@@ -280,27 +300,29 @@ export default function App() {
               roomCode={roomCode}
               sel={themeKey}
               setSel={setThemeKey}
-              t={t}
+              t={theme}
             />
           </div>
 
           {/* STUDY */}
+
           <div
             style={{
               display: page === "study" ? "block" : "none",
             }}
           >
             <Study
-              nick={nick}
+              nick={nickname}
               displayName={displayName}
               memberId={memberId}
               roomCode={roomCode}
               onLeaveRoom={handleLeaveRoom}
-              t={t}
+              theme={theme}
             />
           </div>
 
           {/* LIBRARY */}
+
           <div
             style={{
               display: page === "library" ? "block" : "none",
@@ -312,20 +334,22 @@ export default function App() {
               setWords={setWords}
               quotes={quotes}
               setQuotes={setQuotes}
-              t={t}
+              t={theme}
             />
           </div>
 
           {/* ABOUT */}
+
           <div
             style={{
               display: page === "about" ? "block" : "none",
             }}
           >
-            <About t={t} />
+            <About t={theme} />
           </div>
         </div>
       )}
     </>
   );
 }
+
