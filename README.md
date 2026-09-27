@@ -1,6 +1,10 @@
 # Digital Space ✨
 
 A cozy study app with Pomodoro timer, AI-powered word lookup, ambient sounds, goals tracker, quotes, and room-based real-time collaboration.
+## Backend
+The backend is implemented separately using Spring Boot.
+
+[Digital Space Backend]([https://github.com/Alweena-Fatima/digital-space-backend.git])
 
 ## What Changed
 
