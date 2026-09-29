@@ -182,29 +182,76 @@ const [goals, setGoals] = useState("");
       // Listen for member status updates
       // --------------------------------------------------------
 
-      client.subscribe(
-        `/topic/room/${roomCode}`,
-        (message) => {
-          const updatedMember = JSON.parse(message.body);
+  
 
-          console.log(
-            "📢 Status update received:",
-            updatedMember
-          );
+client.subscribe(
+  `/topic/room/${roomCode}`,
+  (message) => {
+    const event = JSON.parse(message.body);
 
-          // Update only the member whose status changed.
-          setMembers((currentMembers) =>
-            currentMembers.map((member) =>
-              member.id === updatedMember.memberId
-                ? {
-                  ...member,
-                  status: updatedMember.status,
-                }
-                : member
-            )
-          );
+    console.log("📢 Room update received:", event);
+
+    // --------------------------------------------------------
+    // MEMBER JOINED
+    // --------------------------------------------------------
+    if (event.action === "JOIN") {
+      setMembers((currentMembers) => {
+
+        // Prevent duplicate member if the event is received
+        // more than once.
+        const alreadyExists = currentMembers.some(
+          (member) => member.id === event.memberId
+        );
+
+        if (alreadyExists) {
+          return currentMembers;
         }
+
+        return [
+          ...currentMembers,
+          {
+            id: event.memberId,
+            displayName: event.displayName,
+            status: event.status,
+          },
+        ];
+      });
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // MEMBER LEFT
+    // --------------------------------------------------------
+    if (event.action === "LEAVE") {
+      setMembers((currentMembers) =>
+        currentMembers.filter(
+          (member) => member.id !== event.memberId
+        )
       );
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // MEMBER STATUS UPDATED
+    // --------------------------------------------------------
+    setMembers((currentMembers) =>
+      currentMembers.map((member) =>
+        member.id === event.memberId
+          ? {
+              ...member,
+              status: event.status,
+            }
+          : member
+      )
+    );
+  }
+);
+
+
+
+
 
 
       // --------------------------------------------------------
@@ -509,13 +556,17 @@ const [goals, setGoals] = useState("");
               <button
                 onClick={onLeaveRoom}
                 style={{
-                  padding: "8px 14px",
-                  borderRadius: "8px",
+                 
+                  margin: "0px 0px 0px 20px",
+                  
+                  padding: "6px 6px",
+                  borderRadius: "3px",
                   border: "none",
                   cursor: "pointer",
-                  background: "#e57373",
-                  color: "white",
-                  fontWeight: "600",
+                  background: "#11de22",
+                  
+                  color: "black",
+                  fontWeight: "200",
                 }}
               >
                 Leave Room
