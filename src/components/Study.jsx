@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createWebSocketClient } from "../websocket";
-
+import { API_URL } from "../../config";
 
 // ============================================================
 // MOCK DATA
@@ -73,7 +73,7 @@ const [goals, setGoals] = useState("");
     const fetchMembers = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/rooms/${roomCode}/members`
+           `${API_URL}/api/rooms/${roomCode}/members`
         );
 
         if (!response.ok) {
@@ -116,7 +116,7 @@ const [goals, setGoals] = useState("");
     const loadChatHistory = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/rooms/${roomCode}/messages`
+          `${API_URL}/api/rooms/${roomCode}/messages`
         );
 
         if (!response.ok) {

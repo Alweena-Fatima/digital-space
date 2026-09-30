@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createWebSocketClient } from "../websocket";
 import { THEMES } from "../theme";
-
+import { API_URL } from "../../config";
 
 // =======================
 // THEME CARD
@@ -271,7 +271,7 @@ const Themes = ({ roomCode, sel, setSel, t }) => {
     try {
 
       const response = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}/theme?theme=${id.toUpperCase()}`,
+        `${API_URL}/api/rooms/${roomCode}/theme?theme=${id.toUpperCase()}`,
         {
           method: "PUT",
         }

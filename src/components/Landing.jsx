@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import AnimeGirl from "./AnimeGirl";
-
+import { API_URL } from "../../config";
 const Landing = ({ onEnter, theme }) => {
   const [nickname, setNickname] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -15,7 +15,7 @@ const Landing = ({ onEnter, theme }) => {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/rooms",
+         `${API_URL}/api/rooms`,
         {
           method: "POST",
         }

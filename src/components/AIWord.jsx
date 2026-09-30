@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-
+import { API_URL } from "../../config";
 const AIWord = ({ onSave, theme }) => {
   const [word, setWord] = useState("");
   const [wordResult, setWordResult] = useState(null);
@@ -14,7 +14,7 @@ const AIWord = ({ onSave, theme }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/gemini/meaning?word=${encodeURIComponent(
+        `${API_URL}/api/gemini/meaning?word=${encodeURIComponent(
           word.trim()
         )}`
       );

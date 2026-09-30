@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createWebSocketClient } from "../websocket";
-
+import { API_URL } from "../../config";
 const QuotesMini = ({
   roomCode,
   quotes,
@@ -60,7 +60,7 @@ const QuotesMini = ({
     const fetchQuotes = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/rooms/${roomCode}/quotes`
+           `${API_URL}/api/rooms/${roomCode}/quotes`
         );
 
         if (!response.ok) {
@@ -88,7 +88,7 @@ const QuotesMini = ({
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}/quotes`,
+        `${API_URL}/api/rooms/${roomCode}/quotes`,
         {
           method: "POST",
           headers: {
@@ -121,7 +121,7 @@ const QuotesMini = ({
   const deleteQuote = async (quoteId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/rooms/quotes/${quoteId}`,
+        `${API_URL}/api/rooms/quotes/${quoteId}`,
         {
           method: "DELETE",
         }

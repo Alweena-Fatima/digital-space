@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createWebSocketClient } from "../websocket";
-
+import { API_URL } from "../../config";
 const Goals = ({ roomCode, theme }) => {
   const [todos, setTodos] = useState([]);
   const [input, setInput] = useState("");
@@ -71,7 +71,7 @@ const Goals = ({ roomCode, theme }) => {
     const fetchGoals = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/rooms/${roomCode}/goals`
+          `${API_URL}/api/rooms/${roomCode}/goals`
         );
 
         if (!response.ok) {
@@ -104,7 +104,7 @@ const Goals = ({ roomCode, theme }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/rooms/goals/${goalId}`,
+        `${API_URL}/api/rooms/goals/${goalId}`,
         {
           method: "PUT",
           headers: {
@@ -132,7 +132,7 @@ const Goals = ({ roomCode, theme }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}/goals`,
+        `${API_URL}/api/rooms/${roomCode}/goals`,
         {
           method: "POST",
           headers: {
@@ -160,7 +160,7 @@ const Goals = ({ roomCode, theme }) => {
   const deleteGoal = async (goalId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/rooms/goals/${goalId}`,
+        `${API_URL}/api/rooms/goals/${goalId}`,
         {
           method: "DELETE",
         }

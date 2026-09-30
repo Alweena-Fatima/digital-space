@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-
+import { API_URL } from "../config";
 import { getTheme } from "./theme";
 import GlobalStyles from "./components/GlobalStyles";
 import Navbar from "./components/Navbar";
@@ -84,7 +84,7 @@ export default function App() {
        * stored theme. The backend is the source of truth.
        */
       fetch(
-        `http://localhost:8080/api/rooms/${savedRoomCode}`
+         `${API_URL}/api/rooms/${savedRoomCode}`
       )
         .then((response) => {
           if (!response.ok) {
@@ -119,7 +119,7 @@ export default function App() {
     try {
       // Ask the backend to add this member to the room.
       const response = await fetch(
-        "http://localhost:8080/api/rooms/join",
+        `${API_URL}/api/rooms/join`,
         {
           method: "POST",
           headers: {
@@ -144,7 +144,7 @@ export default function App() {
        * room theme from the backend.
        */
       const roomResponse = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}`
+        `${API_URL}/api/rooms/${roomCode}`
       );
 
       if (!roomResponse.ok) {
@@ -199,7 +199,7 @@ export default function App() {
     try {
       // Remove the member from the room in the database.
       const response = await fetch(
-        `http://localhost:8080/api/rooms/${roomCode}/members/${memberId}`,
+        `${API_URL}/api/rooms/${roomCode}/members/${memberId}`,
         {
           method: "DELETE",
         }

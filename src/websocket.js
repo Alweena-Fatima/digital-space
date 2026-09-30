@@ -1,4 +1,20 @@
 import { Client } from "@stomp/stompjs";
+import { API_URL } from "../config";
+
+/*
+ * Convert the HTTP API URL into a WebSocket URL.
+ *
+ * Local:
+ * http://localhost:8080
+ *        ↓
+ * ws://localhost:8080
+ *
+ * Production:
+ * https://digital-space-backend-production.up.railway.app
+ *        ↓
+ * wss://digital-space-backend-production.up.railway.app
+ */
+const WS_URL = API_URL.replace(/^http/, "ws");
 
 /*
  * Creates a WebSocket connection between
@@ -16,7 +32,7 @@ export const createWebSocketClient = (onConnected) => {
      * Spring Boot endpoint:
      * /ws
      */
-    brokerURL: "ws://localhost:8080/ws",
+    brokerURL: `${WS_URL}/ws`,
 
     /*
      * Called when connection succeeds.

@@ -1,6 +1,6 @@
 
 import React from "react";
-
+import { API_URL } from "../../config";
 import Pomodoro from "./Pomodoro";
 import AIWord from "./AIWord";
 import AmbientSounds from "./AmbientSounds";
@@ -80,7 +80,7 @@ const Home = ({
           try {
             // Save the word in the current room.
             const response = await fetch(
-              `http://localhost:8080/api/rooms/${roomCode}/words`,
+               `${API_URL}/api/rooms/${roomCode}/words`,
               {
                 method: "POST",
                 headers: {

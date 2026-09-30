@@ -1,10 +1,10 @@
 import React from "react";
-
+import { API_URL } from "../../config";
 const Library = ({ roomCode,words, setWords, quotes, setQuotes, t }) => {
   const deleteWord = async (id) => {
   try {
     const response = await fetch(
-      `http://localhost:8080/api/rooms/words/${id}`,
+       `${API_URL}/api/rooms/words/${id}`,
       {
         method: "DELETE",
       }
@@ -25,7 +25,7 @@ const Library = ({ roomCode,words, setWords, quotes, setQuotes, t }) => {
 const deleteQuote = async (id) => {
   try {
     const response = await fetch(
-      `http://localhost:8080/api/rooms/quotes/${id}`,
+       `${API_URL}/api/rooms/quotes/${id}`,
       {
         method: "DELETE",
       }
