@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 ];
 
 const playNavigationSound = () => {
-  const navigationSound = new Audio("./sound/navsound.wav");
+  const navigationSound = new Audio("/sound/navsound.wav");
   navigationSound.volume = 0.2;
   navigationSound.play();
 };

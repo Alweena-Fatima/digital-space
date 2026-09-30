@@ -71,10 +71,10 @@ const Pomodoro = ({
     secondsRemaining % 60
   ).padStart(2, "0");
 
-  const startSound = new Audio("././sound/pomostart.wav");
+  const startSound = new Audio("/sound/pomostart.wav");
   startSound.volume = 0.4;
 
-  const resetSound = new Audio("././sound/reset.wav");
+  const resetSound = new Audio("/sound/reset.wav");
 
   return (
     <div
